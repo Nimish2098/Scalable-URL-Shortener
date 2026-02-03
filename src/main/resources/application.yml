@@ -1,0 +1,22 @@
+spring:
+  profiles:
+    active: dev
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/urlshort_db
+    username: root
+    password: Ni@12345
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: redis
+      port: 6379
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
