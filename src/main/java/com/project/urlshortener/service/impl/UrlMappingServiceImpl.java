@@ -40,6 +40,7 @@ public class UrlMappingServiceImpl implements UrlMappingService {
 
         mapping.setShortCode(shortCode);
         mappingRepository.save(mapping);
+
         return shortCode;
     }
 
