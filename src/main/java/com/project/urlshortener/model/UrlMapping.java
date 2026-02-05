@@ -26,4 +26,8 @@ public class UrlMapping {
     private LocalDateTime createdAt;
     private LocalDateTime expiredAt;
     private Long clickCount;
+    private boolean trackingEnabled;   // NEW
+    private String trackingTag;         // NEW (e.g. resume-google, campaign-x)
+    private String notificationEmail;
+
 }

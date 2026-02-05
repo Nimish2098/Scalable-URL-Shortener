@@ -1,8 +1,16 @@
 package com.project.urlshortener.service;
 
 
+import com.project.urlshortener.dto.UrlStatsResponse;
+import com.project.urlshortener.model.UrlMapping;
+import jakarta.servlet.http.HttpServletRequest;
+
+import java.time.LocalDateTime;
+
 public interface UrlMappingService {
 
-    public String createShortUrl(String longUrl);
-    public String getOriginalUrl(String code);
+    public String createShortUrl(String longUrl, LocalDateTime expiresAt);
+    public UrlMapping getMapping(String code, HttpServletRequest request);
+    public UrlStatsResponse getStats(String shortCode);
+
 }

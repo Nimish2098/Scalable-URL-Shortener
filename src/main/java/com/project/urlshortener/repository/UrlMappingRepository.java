@@ -10,6 +10,6 @@ import java.util.Optional;
 public interface UrlMappingRepository extends JpaRepository<UrlMapping,Long> {
 
     public Optional<UrlMapping> findByShortCode(String code);
-    public String existsByShortCode(String code);
+    public boolean existsByShortCode(String code);
 
 }

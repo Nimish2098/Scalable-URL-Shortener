@@ -1,5 +1,7 @@
 package com.project.urlshortener.service.impl;
 
+import com.project.urlshortener.dto.UrlStatsResponse;
+import com.project.urlshortener.exception.InvalidUrlException;
 import com.project.urlshortener.exception.UrlExpiredException;
 import com.project.urlshortener.exception.UrlNotFoundException;
 import com.project.urlshortener.model.UrlMapping;
@@ -7,13 +9,14 @@ import com.project.urlshortener.repository.UrlMappingRepository;
 import com.project.urlshortener.service.ShortCodeGenerator;
 import com.project.urlshortener.service.UrlMappingService;
 import com.project.urlshortener.service.UrlValidationService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.InvalidUrlException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -22,49 +25,76 @@ public class UrlMappingServiceImpl implements UrlMappingService {
     private final UrlMappingRepository mappingRepository;
     private final ShortCodeGenerator generator;
     private final UrlValidationService urlValidationService;
-    private final RedisTemplate<String,String> redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
+
     @Override
-    public String createShortUrl(String longUrl) {
+    public String createShortUrl(String longUrl, LocalDateTime expiresAt) {
+
         if (!urlValidationService.isValidUrl(longUrl)) {
-            throw new InvalidUrlException("Invalid URL format");
+            throw new InvalidUrlException("Invalid URL");
         }
-        longUrl = longUrl.trim();
 
         UrlMapping mapping = new UrlMapping();
-        mapping.setLongUrl(longUrl);
+        mapping.setLongUrl(longUrl.trim());
         mapping.setCreatedAt(LocalDateTime.now());
+        mapping.setExpiredAt(expiresAt);
         mapping.setClickCount(0L);
 
         mapping = mappingRepository.save(mapping);
-        String shortCode = generator.generate(mapping.getId());
 
+        String shortCode = generator.generate(mapping.getId());
         mapping.setShortCode(shortCode);
         mappingRepository.save(mapping);
+
+        if (expiresAt != null) {
+            long ttlSeconds = Duration.between(
+                    LocalDateTime.now(),
+                    expiresAt
+            ).getSeconds();
+
+            redisTemplate.opsForValue()
+                    .set(shortCode, mapping.getLongUrl(), ttlSeconds, TimeUnit.SECONDS);
+        } else {
+            redisTemplate.opsForValue()
+                    .set(shortCode, mapping.getLongUrl(), Duration.ofHours(24));
+        }
 
         return shortCode;
     }
 
     @Override
-    public String getOriginalUrl(String code) {
+    public UrlMapping getMapping(String code, HttpServletRequest request) {
 
-        String cachedUrl = redisTemplate.opsForValue().get(code);
-        if(cachedUrl!=null){
-            return cachedUrl;
-        }
-        UrlMapping urlMapping = mappingRepository.findByShortCode(code)
+        UrlMapping mapping = mappingRepository.findByShortCode(code)
                 .orElseThrow(() -> new UrlNotFoundException("Short URL not found"));
 
-        if (urlMapping.getExpiredAt() != null &&
-                urlMapping.getExpiredAt().isBefore(LocalDateTime.now())) {
-            throw new UrlExpiredException("URL has expired");
+        if (mapping.getExpiredAt() != null &&
+                mapping.getExpiredAt().isBefore(LocalDateTime.now())) {
+            throw new UrlExpiredException("URL expired");
         }
-        redisTemplate.opsForValue().set(code,urlMapping.getLongUrl());
-        redisTemplate.opsForValue()
-                .set(code, urlMapping.getLongUrl(), Duration.ofHours(24));
 
-        urlMapping.setClickCount(urlMapping.getClickCount()+1);
-        mappingRepository.save(urlMapping);
-        return urlMapping.getLongUrl();
+        mapping.setClickCount(mapping.getClickCount() + 1);
+        mappingRepository.save(mapping);
 
+        return mapping;
+    }
+
+    @Override
+    public UrlStatsResponse getStats(String code) {
+
+        UrlMapping mapping = mappingRepository.findByShortCode(code)
+                .orElseThrow(() -> new UrlNotFoundException("URL not found"));
+
+        boolean expired = mapping.getExpiredAt() != null &&
+                mapping.getExpiredAt().isBefore(LocalDateTime.now());
+
+        return new UrlStatsResponse(
+                mapping.getShortCode(),
+                mapping.getLongUrl(),
+                mapping.getClickCount(),
+                mapping.getCreatedAt(),
+                mapping.getExpiredAt(),
+                expired
+        );
     }
 }
