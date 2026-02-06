@@ -4,7 +4,7 @@ A **production-ready URL shortener** built using **Java and Spring Boot** that c
 The system uses **Redis** for high-speed caching, **MySQL** for persistent storage and analytics, supports **time-based URL expiration**, and is fully **Dockerized** for easy deployment.
 
 ---
-
+![UI Preview](assets/Index.png)
 ## 🚀 Features
 
 - **High Performance**: Redis caching (cache-aside) for sub-millisecond redirects.
@@ -44,6 +44,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 ```
 
 ---
+
 
 ## 🏃‍♂️ Getting Started
 
