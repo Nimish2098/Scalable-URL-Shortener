@@ -1,6 +1,5 @@
 package com.project.urlshortener.dto;
 
-
 import java.time.LocalDateTime;
 
 public class ShortenUrlRequest {
@@ -23,5 +22,14 @@ public class ShortenUrlRequest {
     public void setExpiresAt(LocalDateTime expiresAt) {
         this.expiresAt = expiresAt;
     }
-}
 
+    private String trackingTag;
+
+    public String getTrackingTag() {
+        return trackingTag;
+    }
+
+    public void setTrackingTag(String trackingTag) {
+        this.trackingTag = trackingTag;
+    }
+}

@@ -9,7 +9,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name ="url")
+@Table(name = "url")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -26,8 +26,7 @@ public class UrlMapping {
     private LocalDateTime createdAt;
     private LocalDateTime expiredAt;
     private Long clickCount;
-    private boolean trackingEnabled;   // NEW
-    private String trackingTag;         // NEW (e.g. resume-google, campaign-x)
-    private String notificationEmail;
+    private boolean trackingEnabled = true; // NEW
+    private String trackingTag; // NEW (e.g. resume-google, campaign-x)
 
 }

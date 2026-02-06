@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import io.github.cdimascio.dotenv.Dotenv;
 
 @SpringBootApplication
+@org.springframework.scheduling.annotation.EnableAsync
 public class UrlshortenerApplication {
 
 	public static void main(String[] args) {

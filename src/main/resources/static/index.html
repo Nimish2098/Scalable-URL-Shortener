@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>LinkSnap - Enterprise URL Shortener</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* New "Midnight/Violet" Theme */
+      --bg: #09090b;
+      /* Very dark zinc */
+      --header-bg: rgba(0, 0, 0, 0.4);
+      --card: rgba(30, 41, 59, 0.4);
+      /* Slate with opacity */
+      --border: rgba(99, 102, 241, 0.2);
+      /* Faint Indigo */
+      --accent: linear-gradient(135deg, #7c3aed, #db2777);
+      /* Violet to Pink */
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --error: #ef4444;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top right, #2e1065, #000000);
+      /* Dark Violet BG */
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER SECTION */
+    header {
+      width: 100%;
+      padding: 24px 40px;
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      /* "only name on the top" -> Left aligned implies standard start alignment */
+      justify-content: flex-start;
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0;
+      background: var(--accent);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    /* MAIN CONTENT */
+    main {
+      flex: 1;
+      /* Pushes footer down */
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 32px;
+      align-items: start;
+      padding: 40px;
+    }
+
+    @media (max-width: 850px) {
+      main {
+        grid-template-columns: 1fr;
+        padding: 20px;
+      }
+    }
+
+    /* FOOTER SECTION */
+    footer {
+      width: 100%;
+      padding: 24px 40px;
+      background: var(--header-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      /* "only contains links" at bottom (right, from previous context) */
+      justify-content: flex-end;
+      gap: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      transition: all 0.2s;
+      opacity: 0.8;
+    }
+
+    footer a:hover {
+      color: #fff;
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+
+    footer svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    /* Sidebar & Cards */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+      border-radius: 20px;
+      padding: 32px;
+    }
+
+    .card h1 {
+      /* If h1 is used inside card */
+      font-size: 28px;
+      background: var(--accent);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-top: 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.7);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    p {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* History List */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 70vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .history-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .history-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    .history-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+
+    .history-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .history-code {
+      font-weight: 700;
+      color: #a78bfa;
+      /* Light Purple */
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .history-url {
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 4px;
+    }
+
+    .history-date {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 8px;
+      text-align: right;
+    }
+
+    /* Forms */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input {
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.2);
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      width: 100%;
+      transition: all 0.2s;
+    }
+
+    input:focus {
+      border-color: #a78bfa;
+      background: rgba(0, 0, 0, 0.4);
+      box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2);
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity 0.2s;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    button.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      box-shadow: none;
+      font-size: 13px;
+      padding: 10px;
+    }
+
+    button.secondary:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .result {
+      display: none;
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.1);
+      /* Green tint */
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .result span {
+      word-break: break-all;
+      font-size: 15px;
+      font-weight: 600;
+      color: #34d399;
+    }
+
+    /* Toast */
+    .toasts {
+      position: fixed;
+      top: 100px;
+      /* Below header */
+      right: 50%;
+      transform: translateX(50%);
+      display: grid;
+      gap: 12px;
+      z-index: 999;
+    }
+
+    .toast {
+      padding: 14px 20px;
+      border-radius: 50px;
+      font-size: 14px;
+      font-weight: 500;
+      min-width: 250px;
+      text-align: center;
+      animation: slide 0.3s ease;
+      background: white;
+      color: black;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .toast.error {
+      background: #ef4444;
+      color: white;
+    }
+
+    .toast.success {
+      background: #10b981;
+      color: white;
+    }
+
+    @keyframes slide {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) translateX(50%);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) translateX(50%);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- PROPER HEADER SECTION -->
+  <header>
+    <h1>LinkSnap</h1>
+  </header>
+
+  <!-- MAIN CONTENT AREA -->
+  <main>
+
+    <!-- LEFT COLUMN: HISTORY -->
+    <div class="card">
+      <h2>Recent History</h2>
+      <div id="historyList" class="history-list">
+        <p style="text-align:center; font-size:12px;">Loading history...</p>
+      </div>
+      <button class="secondary" style="margin-top:16px;" onclick="loadHistory()">Refresh Feed</button>
+    </div>
+
+    <!-- RIGHT COLUMN: MAIN ACTIONS -->
+    <div style="display:flex; flex-direction:column; gap:32px;">
+
+      <!-- create -->
+      <div class="card">
+        <h2 style="border:none; color:white; font-size:24px; text-transform:none; letter-spacing:0; margin-bottom:4px;">
+          Shorten a Link</h2>
+        <p>Create a trackable short URL in seconds.</p>
+
+        <div class="field">
+          <label>Destination URL</label>
+          <input id="longUrl" placeholder="https://example.com/very-long-product-link" />
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+          <div class="field">
+            <label>Tag (Optional)</label>
+            <input id="trackingTag" placeholder="e.g. Marketing" />
+          </div>
+          <div class="field">
+            <label>Expires (Optional)</label>
+            <input id="expiresAt" type="datetime-local" />
+          </div>
+        </div>
+
+        <button onclick="shorten()">Generate Short Link</button>
+
+        <div class="result" id="resultBox">
+          <span id="shortUrl"></span>
+          <button class="secondary" style="width:auto; margin:0; background:#000; color:#fff; border:none;"
+            onclick="copy()">Copy</button>
+        </div>
+      </div>
+
+      <!-- SEARCH BY TAG -->
+      <div class="card">
+        <h2>Campaign Analytics</h2>
+        <p>Find stats for all links with a specific tag.</p>
+
+        <div style="display:flex; gap:12px;">
+          <input id="searchTag" placeholder="Enter tag name..." style="margin:0;" />
+          <button class="secondary" onclick="loadTagStats()" style="width:auto; margin:0; white-space:nowrap;">Search
+            Tag</button>
+        </div>
+
+        <div id="tagStatsContainer"
+          style="display:none; margin-top: 20px; display: flex; flex-direction: column; gap: 12px;"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- PROPER FOOTER SECTION -->
+  <footer>
+    <a href="https://www.linkedin.com/in/nimishraoworks/" target="_blank">
+      <svg viewBox="0 0 24 24">
+        <path
+          d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+      </svg>
+      Nimish Rao
+    </a>
+    <a href="https://github.com/Nimish2098" target="_blank">
+      <svg viewBox="0 0 24 24">
+        <path
+          d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+      </svg>
+      Nimish2098
+    </a>
+  </footer>
+
+  <div class="toasts" id="toasts"></div>
+
+  <script>
+    const API = "http://localhost:8081";
+
+    // On Load
+    window.onload = loadHistory;
+
+    function toast(message, type = "success") {
+      const el = document.createElement("div");
+      el.className = `toast ${type}`;
+      el.textContent = message;
+      document.getElementById("toasts").appendChild(el);
+      setTimeout(() => el.remove(), 3000);
+    }
+
+    /* --- HISTORY --- */
+    async function loadHistory() {
+      try {
+        const res = await fetch(`${API}/api/history?page=0&size=20`);
+        if (!res.ok) throw new Error("Failed to load history");
+
+        const list = await res.json();
+
+        const container = document.getElementById("historyList");
+        container.innerHTML = "";
+
+        if (!list || list.length === 0) {
+          container.innerHTML = "<p style='text-align:center;font-size:12px;opacity:0.6;'>No links created yet.</p>";
+          return;
+        }
+
+        list.forEach(item => {
+          const div = document.createElement("div");
+          div.className = "history-item";
+          div.innerHTML = `
+                    <div class="history-code">
+                        <span>/${item.shortCode}</span>
+                        <span style="font-weight:normal; font-size:12px; opacity:0.8;">${item.clickCount} 🖱️</span>
+                    </div>
+                    <div class="history-url" title="${item.longUrl}">${item.longUrl}</div>
+                    <div class="history-date">${new Date(item.createdAt).toLocaleDateString()}</div>
+                `;
+          container.appendChild(div);
+        });
+      } catch (e) {
+        console.error(e);
+        document.getElementById("historyList").innerHTML = "<p style='color:var(--error); font-size:12px; text-align:center;'>Could not load history.</p>";
+      }
+    }
+
+    /* --- CREATE --- */
+    async function shorten() {
+      const longUrl = document.getElementById("longUrl").value.trim();
+      if (!longUrl) {
+        toast("Please enter a long URL", "error");
+        return;
+      }
+
+      const body = {
+        longUrl,
+        trackingTag: document.getElementById("trackingTag").value || "Generic",
+        expiresAt: document.getElementById("expiresAt").value
+          ? new Date(document.getElementById("expiresAt").value).toISOString()
+          : undefined
+      };
+
+      try {
+        const res = await fetch(`${API}/api/shorten`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) throw new Error("Invalid URL");
+
+        const text = await res.text();
+        document.getElementById("shortUrl").textContent = text;
+        document.getElementById("resultBox").style.display = "flex";
+        toast("Short URL created successfully");
+
+        // Refresh history
+        setTimeout(loadHistory, 1000);
+      } catch {
+        toast("Failed to shorten URL", "error");
+      }
+    }
+
+    function copy() {
+      const text = document.getElementById("shortUrl").textContent;
+      navigator.clipboard.writeText(text);
+      toast("Copied to clipboard");
+    }
+
+    /* --- TAG SEARCH --- */
+    async function loadTagStats() {
+      const tag = document.getElementById("searchTag").value.trim();
+      if (!tag) {
+        toast("Please enter a tag name", "error");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/api/stats/tag/${tag}`);
+        if (!res.ok) throw new Error();
+
+        const list = await res.json();
+        const container = document.getElementById("tagStatsContainer");
+        container.style.display = "flex";
+        container.innerHTML = "";
+
+        if (list.length === 0) {
+          container.innerHTML = "<p style='font-size:13px; color:var(--muted); text-align:center;'>No links found with tag '" + tag + "'</p>";
+          return;
+        }
+
+        list.forEach(s => {
+          const card = document.createElement("div");
+          card.style.background = "rgba(255,255,255,0.03)";
+          card.style.padding = "16px";
+          card.style.borderRadius = "12px";
+          card.style.border = "1px solid rgba(255,255,255,0.05)";
+          card.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 6px; color: #fff; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#a78bfa; font-size:15px;">/${s.shortCode}</span>
+                    <span style="font-weight:600; color:#34d399; font-size:13px; background:rgba(52, 211, 153, 0.1); padding:4px 8px; border-radius:4px;">${s.clickCount} clicks</span>
+                </div>
+                <div style="font-size: 13px; color: #94a3b8; word-break: break-all; line-height:1.4;">${s.longUrl}</div>
+            `;
+          container.appendChild(card);
+        });
+
+      } catch {
+        toast("Tag lookup failed", "error");
+      }
+    }
+  </script>
+
+</body>
+
+</html>

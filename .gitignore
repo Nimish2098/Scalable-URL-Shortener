@@ -31,5 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
-
+DEPLOYMENT.md
+load_test.js
 .env

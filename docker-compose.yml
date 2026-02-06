@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   mysqldb:
     image: mysql:8.0
@@ -12,6 +10,11 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:alpine
@@ -25,10 +28,12 @@ services:
     container_name: urlshortener-app
     restart: always
     ports:
-      - "8080:8080"
+      - "8081:8081"
     depends_on:
-      - mysqldb
-      - redis
+      mysqldb:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysqldb:3306/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
@@ -37,9 +42,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
 
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
 
 volumes:
   mysql_data:

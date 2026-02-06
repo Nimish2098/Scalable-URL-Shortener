@@ -7,9 +7,12 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface UrlMappingRepository extends JpaRepository<UrlMapping,Long> {
+public interface UrlMappingRepository extends JpaRepository<UrlMapping, Long> {
 
     public Optional<UrlMapping> findByShortCode(String code);
+
+    public java.util.List<UrlMapping> findByTrackingTag(String trackingTag);
+
     public boolean existsByShortCode(String code);
 
 }

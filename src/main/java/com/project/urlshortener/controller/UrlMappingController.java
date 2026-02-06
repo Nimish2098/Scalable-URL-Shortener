@@ -15,6 +15,7 @@ import java.net.URI;
 
 @RestController
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class UrlMappingController {
 
     private final UrlMappingService urlMappingService;
@@ -23,10 +24,16 @@ public class UrlMappingController {
     @PostMapping("/api/shorten")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public String shortenURL(@RequestBody ShortenUrlRequest request) {
-        return urlMappingService.createShortUrl(
+        String shortCode = urlMappingService.createShortUrl(
                 request.getLongUrl(),
-                request.getExpiresAt()
-        );
+                request.getTrackingTag(),
+                request.getExpiresAt());
+
+        return org.springframework.web.servlet.support.ServletUriComponentsBuilder
+                .fromCurrentContextPath()
+                .path("/{code}")
+                .buildAndExpand(shortCode)
+                .toUriString();
     }
 
     @GetMapping("/{code}")
@@ -34,7 +41,7 @@ public class UrlMappingController {
             @PathVariable String code,
             HttpServletRequest request) {
 
-        UrlMapping mapping = urlMappingService.getMapping(code,request);
+        UrlMapping mapping = urlMappingService.getMapping(code, request);
 
         linkTrackingService.track(mapping, request);
 
@@ -46,5 +53,17 @@ public class UrlMappingController {
     @GetMapping("/api/stats/{code}")
     public UrlStatsResponse getStats(@PathVariable String code) {
         return urlMappingService.getStats(code);
+    }
+
+    @GetMapping("/api/stats/tag/{tag}")
+    public java.util.List<UrlStatsResponse> getStatsByTag(@PathVariable String tag) {
+        return urlMappingService.getStatsByTag(tag);
+    }
+
+    @GetMapping("/api/history")
+    public java.util.List<UrlStatsResponse> getHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return urlMappingService.getAllLinks(page, size);
     }
 }

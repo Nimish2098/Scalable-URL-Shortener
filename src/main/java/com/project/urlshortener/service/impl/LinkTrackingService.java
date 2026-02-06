@@ -17,35 +17,32 @@ public class LinkTrackingService {
 
     private final LinkAccessRepository repository;
     private final GeoLocationService geoLocationService;
-    private final EmailNotificationService notificationService;
-    private final RedisTemplate<String,String> redisTemplate;
-
+    private final RedisTemplate<String, String> redisTemplate;
+    private final SlackNotificationService slackService;
 
     public void track(UrlMapping mapping, HttpServletRequest request) {
-        if (!mapping.isTrackingEnabled()) return;
+        if (!mapping.isTrackingEnabled())
+            return;
 
         String ip = getClientIp(request);
-        String useragent = request.getHeader("User-Agent");
+        String userAgent = request.getHeader("User-Agent");
         String location = geoLocationService.resolveLocation(ip);
-
 
         LinkAccessLog accessLog = new LinkAccessLog();
         accessLog.setTag(mapping.getTrackingTag());
         accessLog.setIpAddress(ip);
-        accessLog.setUserAgent(useragent);
+        accessLog.setUserAgent(userAgent);
         accessLog.setLocation(location);
         accessLog.setAccessedAt(LocalDateTime.now());
 
         repository.save(accessLog);
 
-        notifyOncePerWindow(mapping, location, useragent);
-
-
+        notifyOncePerWindow(mapping, location, userAgent);
     }
 
     public String getClientIp(HttpServletRequest request) {
-        String forwaded = request.getHeader("X-Forwaded-For");
-        return forwaded!=null ? forwaded.split(",")[0]: request.getRemoteAddr();
+        String forwarded = request.getHeader("X-Forwarded-For"); // ✅ FIX 2
+        return forwarded != null ? forwarded.split(",")[0] : request.getRemoteAddr();
     }
 
     private void notifyOncePerWindow(
@@ -55,17 +52,18 @@ public class LinkTrackingService {
 
         String key = "notify:" + mapping.getShortCode();
 
-        if (redisTemplate.hasKey(key)) return;
+        // Deduplicate notifications for 12h
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(key)))
+            return;
 
         redisTemplate.opsForValue()
-                .set(key, "1", Duration.ofHours(12));
+                .set(key, "1", Duration.ofHours(12)); // ✅ FIX 3 (intentional)
 
-        notificationService.notify(
-                mapping.getTrackingTag(),
-                location,
-                userAgent
-        );
+        // 1. Send Slack Notification
+        slackService.notify(
+                "Link accessed\n" +
+                        "Tag: " + mapping.getTrackingTag() + "\n" +
+                        "Location: " + location + "\n" +
+                        "User-Agent: " + userAgent);
     }
-
-
 }

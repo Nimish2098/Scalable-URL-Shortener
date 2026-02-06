@@ -17,11 +17,15 @@ public class GeoLocationService {
             String url = "https://ipapi.co/" + ip + "/json";
             Map response = restTemplate.getForObject(url, Map.class);
 
-            if (response == null) return "Unknown";
+            if (response == null)
+                return "Unknown";
 
             String city = (String) response.get("city");
             String region = (String) response.get("region");
             String country = (String) response.get("country_name");
+
+            if (city == null || region == null || country == null)
+                return "Unknown";
 
             return city + ", " + region + ", " + country;
         } catch (Exception e) {
