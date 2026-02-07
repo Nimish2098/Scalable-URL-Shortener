@@ -11,6 +11,7 @@ import com.project.urlshortener.service.UrlMappingService;
 import com.project.urlshortener.service.UrlValidationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UrlMappingServiceImpl implements UrlMappingService {
 
     private final UrlMappingRepository mappingRepository;
@@ -48,10 +50,14 @@ public class UrlMappingServiceImpl implements UrlMappingService {
         mappingRepository.save(mapping);
         Duration ttl = computeTtl(mapping.getExpiredAt());
         if (ttl != null) {
-            redisTemplate.opsForValue().set(
-                    "shortUrl:" + shortCode,
-                    mapping,
-                    ttl);
+            try {
+                redisTemplate.opsForValue().set(
+                        "shortUrl:" + shortCode,
+                        mapping,
+                        ttl);
+            } catch (Exception e) {
+                log.error("Failed to cache created shortUrl in Redis: {}", e.getMessage());
+            }
         }
 
         return shortCode;
@@ -63,11 +69,16 @@ public class UrlMappingServiceImpl implements UrlMappingService {
         String cacheKey = "shortUrl:" + code;
 
         // 1. Try Redis
-        UrlMapping mapping = redisTemplate.opsForValue().get(cacheKey);
+        UrlMapping mapping = null;
+        try {
+            mapping = redisTemplate.opsForValue().get(cacheKey);
+        } catch (Exception e) {
+            log.error("Failed to retrieve from Redis, falling back to DB: {}", e.getMessage());
+        }
 
         if (mapping == null) {
             // 2. DB fallback
-            mapping = mappingRepository.findByShortCode(code)
+            mapping = mappingRepository.findFirstByShortCode(code)
                     .orElseThrow(() -> new UrlNotFoundException("Short URL not found"));
 
             // 3. Expiry check
@@ -79,7 +90,11 @@ public class UrlMappingServiceImpl implements UrlMappingService {
             // 4. Cache with TTL
             Duration ttl = computeTtl(mapping.getExpiredAt());
             if (ttl != null) {
-                redisTemplate.opsForValue().set(cacheKey, mapping, ttl);
+                try {
+                    redisTemplate.opsForValue().set(cacheKey, mapping, ttl);
+                } catch (Exception e) {
+                    log.error("Failed to cache retrieved mapping in Redis: {}", e.getMessage());
+                }
             }
         }
 
@@ -104,7 +119,7 @@ public class UrlMappingServiceImpl implements UrlMappingService {
     @Override
     public UrlStatsResponse getStats(String code) {
 
-        UrlMapping mapping = mappingRepository.findByShortCode(code)
+        UrlMapping mapping = mappingRepository.findFirstByShortCode(code)
                 .orElseThrow(() -> new UrlNotFoundException("URL not found"));
 
         boolean expired = mapping.getExpiredAt() != null &&

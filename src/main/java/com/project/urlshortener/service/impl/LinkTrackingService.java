@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class LinkTrackingService {
 
     private final LinkAccessRepository repository;
@@ -53,12 +54,20 @@ public class LinkTrackingService {
         String key = "notify:" + mapping.getShortCode();
 
         // Deduplicate notifications for 12h
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(key)))
-            return;
+        // Deduplicate notifications for 12h
+        try {
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(key)))
+                return;
+        } catch (Exception e) {
+            log.error("Failed to check Redis key for notification deduplication: {}", e.getMessage());
+        }
 
-        redisTemplate.opsForValue()
-                .set(key, "1", Duration.ofHours(12)); // ✅ FIX 3 (intentional)
-
+        try {
+            redisTemplate.opsForValue()
+                    .set(key, "1", Duration.ofHours(12)); // ✅ FIX 3 (intentional)
+        } catch (Exception e) {
+            log.error("Failed to set Redis key for notification deduplication: {}", e.getMessage());
+        }
         // 1. Send Slack Notification
         slackService.notify(
                 "Link accessed\n" +
